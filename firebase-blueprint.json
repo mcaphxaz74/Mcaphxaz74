@@ -1,0 +1,157 @@
+{
+  "entities": {
+    "PlayerProfile": {
+      "title": "PlayerProfile",
+      "description": "Persistent player career profile, coin bank, high score, unlocked worlds, and equipped vehicle/weapon.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase user UID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Player display name shown in the garage and HUD."
+        },
+        "totalCoins": {
+          "type": "integer",
+          "description": "Accumulated Mushroom Kingdom coins across runs."
+        },
+        "highScore": {
+          "type": "integer",
+          "description": "Highest arcade score achieved by the player."
+        },
+        "highestWorldUnlocked": {
+          "type": "integer",
+          "description": "Highest unlocked world index (1 to 3)."
+        },
+        "equippedVehicle": {
+          "type": "string",
+          "enum": ["kart_red", "muscle_gold", "koopa_tank"],
+          "description": "Currently selected driveable vehicle ID."
+        },
+        "equippedWeapon": {
+          "type": "string",
+          "enum": ["fire_blaster", "star_rifle", "shell_cannon"],
+          "description": "Currently selected long-range blaster weapon ID."
+        },
+        "unlockedVehicles": {
+          "type": "array",
+          "description": "List of unlocked vehicle IDs (max 5)."
+        },
+        "unlockedWeapons": {
+          "type": "array",
+          "description": "List of unlocked weapon IDs (max 5)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of profile creation (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last profile update (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "totalCoins",
+        "highScore",
+        "highestWorldUnlocked",
+        "equippedVehicle",
+        "equippedWeapon",
+        "unlockedVehicles",
+        "unlockedWeapons",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LevelRun": {
+      "title": "LevelRun",
+      "description": "Completed or attempted level run log for a player.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase user UID."
+        },
+        "worldId": {
+          "type": "integer",
+          "description": "World index (1 to 3)."
+        },
+        "worldName": {
+          "type": "string",
+          "description": "Name of the Mushroom Kingdom stage."
+        },
+        "score": {
+          "type": "integer",
+          "description": "Run score."
+        },
+        "coinsCollected": {
+          "type": "integer",
+          "description": "Coins picked up during the run."
+        },
+        "enemiesDefeated": {
+          "type": "integer",
+          "description": "Enemies blasted or bumped during the run."
+        },
+        "maxWantedStars": {
+          "type": "integer",
+          "description": "Peak GTA wanted heat level reached (0 to 5)."
+        },
+        "cleared": {
+          "type": "boolean",
+          "description": "Whether the player reached the flagpole."
+        },
+        "vehicleUsed": {
+          "type": "string",
+          "description": "Vehicle ID used during the run."
+        },
+        "weaponUsed": {
+          "type": "string",
+          "description": "Weapon ID used during the run."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the run was recorded (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the run document (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "worldId",
+        "worldName",
+        "score",
+        "coinsCollected",
+        "enemiesDefeated",
+        "maxWantedStars",
+        "cleared",
+        "vehicleUsed",
+        "weaponUsed",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/PlayerProfile"
+      },
+      "description": "Player career profile document scoped to the authenticated user."
+    },
+    "/users/{userId}/runs/{runId}": {
+      "schema": {
+        "$ref": "#/entities/LevelRun"
+      },
+      "description": "User-scoped level run history subcollection."
+    }
+  }
+}

@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidVehicle(v) {
+      return v is string && v in ['kart_red', 'muscle_gold', 'koopa_tank'];
+    }
+
+    function isValidWeapon(w) {
+      return w is string && w in ['fire_blaster', 'star_rifle', 'shell_cannon'];
+    }
+
+    function isValidPlayerProfile(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.displayName is string &&
+             data.displayName.size() >= 1 &&
+             data.displayName.size() <= 50 &&
+             data.totalCoins is int &&
+             data.totalCoins >= 0 &&
+             data.totalCoins <= 9999999 &&
+             data.highScore is int &&
+             data.highScore >= 0 &&
+             data.highScore <= 99999999 &&
+             data.highestWorldUnlocked is int &&
+             data.highestWorldUnlocked >= 1 &&
+             data.highestWorldUnlocked <= 3 &&
+             isValidVehicle(data.equippedVehicle) &&
+             isValidWeapon(data.equippedWeapon) &&
+             data.unlockedVehicles is list &&
+             data.unlockedVehicles.size() >= 1 &&
+             data.unlockedVehicles.size() <= 5 &&
+             data.unlockedVehicles[0] is string &&
+             data.unlockedWeapons is list &&
+             data.unlockedWeapons.size() >= 1 &&
+             data.unlockedWeapons.size() <= 5 &&
+             data.unlockedWeapons[0] is string &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    function isValidLevelRun(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.worldId is int &&
+             data.worldId >= 1 &&
+             data.worldId <= 3 &&
+             data.worldName is string &&
+             data.worldName.size() >= 1 &&
+             data.worldName.size() <= 60 &&
+             data.score is int &&
+             data.score >= 0 &&
+             data.score <= 99999999 &&
+             data.coinsCollected is int &&
+             data.coinsCollected >= 0 &&
+             data.coinsCollected <= 999999 &&
+             data.enemiesDefeated is int &&
+             data.enemiesDefeated >= 0 &&
+             data.enemiesDefeated <= 999999 &&
+             data.maxWantedStars is int &&
+             data.maxWantedStars >= 0 &&
+             data.maxWantedStars <= 5 &&
+             data.cleared is bool &&
+             isValidVehicle(data.vehicleUsed) &&
+             isValidWeapon(data.weaponUsed) &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isValidId(userId) &&
+                       isOwner(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'totalCoins', 'highScore',
+                         'highestWorldUnlocked', 'equippedVehicle', 'equippedWeapon',
+                         'unlockedVehicles', 'unlockedWeapons', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'totalCoins', 'highScore',
+                         'highestWorldUnlocked', 'equippedVehicle', 'equippedWeapon',
+                         'unlockedVehicles', 'unlockedWeapons', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidPlayerProfile(incoming(), userId);
+
+      allow update: if isValidId(userId) &&
+                       isOwner(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidPlayerProfile(incoming(), userId) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'totalCoins', 'highScore',
+                         'highestWorldUnlocked', 'equippedVehicle', 'equippedWeapon',
+                         'unlockedVehicles', 'unlockedWeapons', 'updatedAt'
+                       ]);
+
+      allow delete: if isValidId(userId) && isOwner(userId);
+
+      match /runs/{runId} {
+        allow get: if isValidId(userId) && isValidId(runId) && isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isValidId(userId) &&
+                         isValidId(runId) &&
+                         isOwner(userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'worldId', 'worldName', 'score', 'coinsCollected',
+                           'enemiesDefeated', 'maxWantedStars', 'cleared',
+                           'vehicleUsed', 'weaponUsed', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'worldId', 'worldName', 'score', 'coinsCollected',
+                           'enemiesDefeated', 'maxWantedStars', 'cleared',
+                           'vehicleUsed', 'weaponUsed', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidLevelRun(incoming(), userId);
+
+        // Run history records are immutable once logged
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(runId) && isOwner(userId);
+      }
+    }
+  }
+}
